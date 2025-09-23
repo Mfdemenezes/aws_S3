@@ -1,63 +1,57 @@
 # ======================
-# OUTPUTS DOS BUCKETS S3
+# OUTPUTS DO BUCKET S3
 # ======================
 
-output "main_bucket_name" {
-  description = "Nome do bucket principal"
+output "bucket_name" {
+  description = "Nome do bucket S3"
   value       = aws_s3_bucket.main_bucket.bucket
 }
 
-output "main_bucket_arn" {
-  description = "ARN do bucket principal"
+output "bucket_arn" {
+  description = "ARN do bucket S3"
   value       = aws_s3_bucket.main_bucket.arn
 }
 
-output "main_bucket_domain_name" {
-  description = "Domain name do bucket principal"
+output "bucket_domain_name" {
+  description = "Domain name do bucket S3"
   value       = aws_s3_bucket.main_bucket.bucket_domain_name
 }
 
-output "logs_bucket_name" {
-  description = "Nome do bucket de logs"
-  value       = aws_s3_bucket.logs_bucket.bucket
+output "bucket_id" {
+  description = "ID do bucket S3"
+  value       = aws_s3_bucket.main_bucket.id
 }
 
-output "logs_bucket_arn" {
-  description = "ARN do bucket de logs"
-  value       = aws_s3_bucket.logs_bucket.arn
+output "bucket_region" {
+  description = "RegiÃ£o do bucket S3"
+  value       = aws_s3_bucket.main_bucket.region
 }
 
 output "bucket_suffix" {
-  description = "Sufixo aleatório usado nos buckets"
+  description = "Sufixo aleatÃ³rio usado no bucket"
   value       = random_string.bucket_suffix.result
 }
 
 # ======================
-# INFORMAÇÕES DE RESUMO
+# INFORMAÃ‡Ã•ES DE RESUMO
 # ======================
 
-output "buckets_summary" {
-  description = "Resumo dos buckets criados"
+output "bucket_summary" {
+  description = "Resumo do bucket criado"
   value = {
-    main_bucket = {
-      name       = aws_s3_bucket.main_bucket.bucket
-      arn        = aws_s3_bucket.main_bucket.arn
-      region     = aws_s3_bucket.main_bucket.region
-      encrypted  = true
-      versioning = "Enabled"
-    }
-    logs_bucket = {
-      name       = aws_s3_bucket.logs_bucket.bucket
-      arn        = aws_s3_bucket.logs_bucket.arn
-      region     = aws_s3_bucket.logs_bucket.region
-      encrypted  = true
-      versioning = "Enabled"
-    }
+    name         = aws_s3_bucket.main_bucket.bucket
+    arn          = aws_s3_bucket.main_bucket.arn
+    region       = aws_s3_bucket.main_bucket.region
+    encrypted    = true
+    versioning   = var.enable_versioning ? "Enabled" : "Disabled"
+    lifecycle    = var.lifecycle_enabled ? "Enabled" : "Disabled"
+    public_read  = false
+    public_write = false
   }
 }
 
 output "project_info" {
-  description = "Informações do projeto"
+  description = "InformaÃ§Ãµes do projeto"
   value = {
     project_name = var.project_name
     environment  = var.environment

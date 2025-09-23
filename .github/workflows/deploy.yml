@@ -79,7 +79,7 @@ jobs:
         cd terraform
         echo "🚀 Aplicando infraestrutura automaticamente..."
         terraform apply -auto-approve -no-color
-        echo "✅ Buckets S3 criados com sucesso!"
+        echo "✅ Bucket S3 criado com sucesso!"
 
     - name: 🚀 Apply (Manual)
       if: github.event.inputs.action == 'apply'
@@ -87,22 +87,22 @@ jobs:
         cd terraform
         echo "🚀 Aplicando infraestrutura manualmente..."
         terraform apply -auto-approve -no-color
-        echo "✅ Buckets S3 criados com sucesso!"
+        echo "✅ Bucket S3 criado com sucesso!"
 
     - name: 📊 Show Results
       if: github.event.inputs.action == 'apply' || (github.ref == 'refs/heads/main' && github.event_name == 'push')
       run: |
         cd terraform
-        echo "📊 Informações dos buckets criados:"
+        echo "📊 Informações do bucket criado:"
         terraform output -no-color
 
         echo ""
-        echo "🔍 Buckets S3 na AWS:"
+        echo "🔍 Bucket S3 na AWS:"
         aws s3 ls | grep storage-marcelo || echo "Verificando..."
 
         echo ""
         echo "🔒 Verificando criptografia:"
-        MAIN_BUCKET=$(terraform output -raw main_bucket_name)
-        if [ ! -z "$MAIN_BUCKET" ]; then
-          aws s3api get-bucket-encryption --bucket $MAIN_BUCKET --region ${{ env.AWS_REGION }} | grep AES256 && echo "✅ Bucket principal criptografado" || echo "⚠️ Verificação de criptografia"
+        BUCKET_NAME=$(terraform output -raw bucket_name)
+        if [ ! -z "$BUCKET_NAME" ]; then
+          aws s3api get-bucket-encryption --bucket $BUCKET_NAME --region ${{ env.AWS_REGION }} | grep AES256 && echo "✅ Bucket criptografado" || echo "⚠️ Verificação de criptografia"
         fi

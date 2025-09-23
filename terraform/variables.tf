@@ -1,9 +1,9 @@
 # ======================
-# VARIÁVEIS DO PROJETO S3
+# VARIï¿½VEIS DO PROJETO S3
 # ======================
 
 variable "aws_region" {
-  description = "Região AWS onde os recursos serão criados"
+  description = "Regiï¿½o AWS onde os recursos serï¿½o criados"
   type        = string
   default     = "us-east-1"
 }
@@ -37,11 +37,6 @@ variable "enable_encryption" {
   default     = true
 }
 
-variable "enable_access_logging" {
-  description = "Habilitar logs de acesso"
-  type        = bool
-  default     = true
-}
 
 variable "lifecycle_enabled" {
   description = "Habilitar regras de ciclo de vida"
@@ -50,19 +45,19 @@ variable "lifecycle_enabled" {
 }
 
 variable "days_to_ia" {
-  description = "Dias para transição para IA"
+  description = "Dias para transiï¿½ï¿½o para IA"
   type        = number
   default     = 30
 }
 
 variable "days_to_glacier" {
-  description = "Dias para transição para Glacier"
+  description = "Dias para transiï¿½ï¿½o para Glacier"
   type        = number
   default     = 90
 }
 
 variable "days_to_expire" {
-  description = "Dias para expiração dos objetos"
+  description = "Dias para expiraï¿½ï¿½o dos objetos"
   type        = number
   default     = 365
 }

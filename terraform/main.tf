@@ -1,5 +1,5 @@
 # ======================
-# S3 BUCKETS COM CRIPTOGRAFIA
+# S3 BUCKET COM CRIPTOGRAFIA
 # ======================
 
 # Bucket principal de dados
@@ -13,18 +13,7 @@ resource "aws_s3_bucket" "main_bucket" {
   }
 }
 
-# Bucket para logs
-resource "aws_s3_bucket" "logs_bucket" {
-  bucket = "${var.project_name}-logs-${var.environment}-${random_string.bucket_suffix.result}"
-
-  tags = {
-    Name        = "${var.project_name}-logs-bucket"
-    Environment = var.environment
-    Purpose     = "Access logs storage"
-  }
-}
-
-# Sufixo aleatorio para garantir nomes �nicos
+# Sufixo aleatório para garantir nomes únicos
 resource "random_string" "bucket_suffix" {
   length  = 8
   special = false
@@ -32,7 +21,7 @@ resource "random_string" "bucket_suffix" {
 }
 
 # ======================
-# CRIPTOGRAFIA DOS BUCKETS
+# CRIPTOGRAFIA DO BUCKET
 # ======================
 
 # Criptografia do bucket principal
@@ -47,35 +36,13 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "main_bucket" {
   }
 }
 
-# Criptografia do bucket de logs
-resource "aws_s3_bucket_server_side_encryption_configuration" "logs_bucket" {
-  bucket = aws_s3_bucket.logs_bucket.id
-
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-    bucket_key_enabled = true
-  }
-}
-
 # ======================
-# CONFIGURA��ES DE SEGURAN�A
+# CONFIGURAÇÕES DE SEGURANÇA
 # ======================
 
-# Bloquear acesso p�blico no bucket principal
+# Bloquear acesso público no bucket principal
 resource "aws_s3_bucket_public_access_block" "main_bucket" {
   bucket = aws_s3_bucket.main_bucket.id
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-# Bloquear acesso p�blico no bucket de logs
-resource "aws_s3_bucket_public_access_block" "logs_bucket" {
-  bucket = aws_s3_bucket.logs_bucket.id
 
   block_public_acls       = true
   block_public_policy     = true
@@ -92,29 +59,8 @@ resource "aws_s3_bucket_versioning" "main_bucket" {
   bucket = aws_s3_bucket.main_bucket.id
 
   versioning_configuration {
-    status = "Enabled"
+    status = var.enable_versioning ? "Enabled" : "Disabled"
   }
-}
-
-# Versionamento do bucket de logs
-resource "aws_s3_bucket_versioning" "logs_bucket" {
-  bucket = aws_s3_bucket.logs_bucket.id
-
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
-
-# ======================
-# LOGGING DE ACESSO
-# ======================
-
-# Configurar logging de acesso para o bucket principal
-resource "aws_s3_bucket_logging" "main_bucket" {
-  bucket = aws_s3_bucket.main_bucket.id
-
-  target_bucket = aws_s3_bucket.logs_bucket.id
-  target_prefix = "access-logs/"
 }
 
 # ======================
@@ -123,6 +69,7 @@ resource "aws_s3_bucket_logging" "main_bucket" {
 
 # Regras de ciclo de vida para o bucket principal
 resource "aws_s3_bucket_lifecycle_configuration" "main_bucket" {
+  count  = var.lifecycle_enabled ? 1 : 0
   bucket = aws_s3_bucket.main_bucket.id
 
   rule {
@@ -130,17 +77,17 @@ resource "aws_s3_bucket_lifecycle_configuration" "main_bucket" {
     status = "Enabled"
 
     transition {
-      days          = 30
+      days          = var.days_to_ia
       storage_class = "STANDARD_IA"
     }
 
     transition {
-      days          = 90
+      days          = var.days_to_glacier
       storage_class = "GLACIER"
     }
 
     expiration {
-      days = 365
+      days = var.days_to_expire
     }
   }
 
@@ -150,20 +97,6 @@ resource "aws_s3_bucket_lifecycle_configuration" "main_bucket" {
 
     noncurrent_version_expiration {
       noncurrent_days = 90
-    }
-  }
-}
-
-# Regras de ciclo de vida para logs
-resource "aws_s3_bucket_lifecycle_configuration" "logs_bucket" {
-  bucket = aws_s3_bucket.logs_bucket.id
-
-  rule {
-    id     = "delete_old_logs"
-    status = "Enabled"
-
-    expiration {
-      days = 90
     }
   }
 }

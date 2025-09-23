@@ -1,29 +1,24 @@
 # 🗄️ AWS S3 Infrastructure with Terraform
 
-Projeto simples para criar buckets S3 criptografados na AWS usando Terraform com state no S3.
+Projeto simples para criar bucket S3 criptografado na AWS usando Terraform com state no S3.
 
 ## 🚀 Características
 
-- **2 Buckets S3**: Principal e para logs
-- **Criptografia**: AES256 em todos os buckets
-- **Versionamento**: Habilitado para controle de versões
-- **Logs de acesso**: Configurado automaticamente
+- **Bucket S3 único**: Simples e direto
+- **Criptografia**: AES256 habilitada
+- **Versionamento**: Controle de versões
 - **Lifecycle rules**: Transição automática para IA e Glacier
 - **Segurança**: Bloqueio de acesso público
 - **Backend remoto**: tfstate armazenado no S3
 
-## 📋 Buckets Criados
+## 📋 Bucket Criado
 
-1. **Bucket Principal**: `storage-marcelo-dev-{random}`
-   - Armazenamento principal de dados
-   - Criptografia AES256
-   - Versionamento habilitado
-   - Lifecycle rules configuradas
-
-2. **Bucket de Logs**: `storage-marcelo-logs-dev-{random}`
-   - Logs de acesso do bucket principal
-   - Criptografia AES256
-   - Auto-limpeza após 90 dias
+**Bucket Principal**: `storage-marcelo-dev-{random}`
+- Armazenamento de dados criptografado
+- Criptografia AES256 por padrão
+- Versionamento habilitado
+- Lifecycle rules configuradas
+- Acesso público bloqueado
 
 ## 🛠️ Como usar
 
@@ -51,8 +46,8 @@ terraform destroy
 ## 📊 Outputs
 
 Após o deploy, você terá:
-- Nomes dos buckets
-- ARNs dos buckets
+- Nome do bucket
+- ARN do bucket
 - Informações de criptografia
 - Resumo completo da infraestrutura
 
@@ -61,5 +56,4 @@ Após o deploy, você terá:
 - ✅ Criptografia AES256
 - ✅ Bloqueio de acesso público
 - ✅ Versionamento habilitado
-- ✅ Logs de acesso
 - ✅ State criptografado no S3

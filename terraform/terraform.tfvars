@@ -1,5 +1,5 @@
 # ======================
-# VALORES DAS VARIÁVEIS
+# VALORES DAS VARIï¿½VEIS
 # ======================
 
 # Projeto
@@ -9,13 +9,12 @@ environment  = "dev"
 # AWS
 aws_region = "us-east-1"
 
-# Configurações dos buckets
+# Configuraï¿½ï¿½es dos buckets
 enable_versioning     = true
 enable_encryption     = true
-enable_access_logging = true
 lifecycle_enabled     = true
 
 # Ciclo de vida (em dias)
-days_to_ia      = 30   # Transição para Infrequent Access
-days_to_glacier = 90   # Transição para Glacier
-days_to_expire  = 365  # Expiração dos objetos
+days_to_ia      = 30   # Transiï¿½ï¿½o para Infrequent Access
+days_to_glacier = 90   # Transiï¿½ï¿½o para Glacier
+days_to_expire  = 365  # Expiraï¿½ï¿½o dos objetos

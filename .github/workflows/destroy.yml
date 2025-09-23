@@ -63,7 +63,7 @@ jobs:
     - name: 🔍 Show What Will Be Destroyed
       run: |
         cd terraform
-        echo "🔍 BUCKETS QUE SERÃO DESTRUÍDOS:"
+        echo "🔍 BUCKET QUE SERÁ DESTRUÍDO:"
         echo "==============================="
 
         echo "📋 Buckets S3 atuais:"
@@ -73,31 +73,30 @@ jobs:
         echo "📋 Plano de destruição do Terraform:"
         terraform plan -destroy -no-color
 
-    - name: 🗑️ Empty Buckets First
+    - name: 🗑️ Empty Bucket First
       run: |
         cd terraform
-        echo "🗑️ Esvaziando buckets antes de destruir..."
+        echo "🗑️ Esvaziando bucket antes de destruir..."
 
-        # Obter nomes dos buckets do Terraform
-        MAIN_BUCKET=$(terraform output -raw main_bucket_name 2>/dev/null || echo "")
-        LOGS_BUCKET=$(terraform output -raw logs_bucket_name 2>/dev/null || echo "")
+        # Obter nome do bucket do Terraform
+        BUCKET_NAME=$(terraform output -raw bucket_name 2>/dev/null || echo "")
 
-        if [ ! -z "$MAIN_BUCKET" ]; then
-          echo "🗑️ Esvaziando bucket principal: $MAIN_BUCKET"
-          aws s3 rm s3://$MAIN_BUCKET --recursive || echo "Bucket já vazio ou não existe"
+        if [ ! -z "$BUCKET_NAME" ]; then
+          echo "🗑️ Esvaziando bucket: $BUCKET_NAME"
+          aws s3 rm s3://$BUCKET_NAME --recursive || echo "Bucket já vazio ou não existe"
 
           echo "🗑️ Removendo versões antigas..."
-          aws s3api list-object-versions --bucket $MAIN_BUCKET --query 'Versions[].[Key,VersionId]' --output text | while read key version; do
-            aws s3api delete-object --bucket $MAIN_BUCKET --key $key --version-id $version || true
+          aws s3api list-object-versions --bucket $BUCKET_NAME --query 'Versions[].[Key,VersionId]' --output text | while read key version; do
+            aws s3api delete-object --bucket $BUCKET_NAME --key $key --version-id $version || true
+          done
+
+          echo "🗑️ Removendo delete markers..."
+          aws s3api list-object-versions --bucket $BUCKET_NAME --query 'DeleteMarkers[].[Key,VersionId]' --output text | while read key version; do
+            aws s3api delete-object --bucket $BUCKET_NAME --key $key --version-id $version || true
           done
         fi
 
-        if [ ! -z "$LOGS_BUCKET" ]; then
-          echo "🗑️ Esvaziando bucket de logs: $LOGS_BUCKET"
-          aws s3 rm s3://$LOGS_BUCKET --recursive || echo "Bucket já vazio ou não existe"
-        fi
-
-        echo "✅ Buckets esvaziados!"
+        echo "✅ Bucket esvaziado!"
 
     - name: ⏳ Wait Before Destroy
       run: |
@@ -116,9 +115,7 @@ jobs:
 
           # Mostrar progresso detalhado
           if echo "$line" | grep -q "aws_s3_bucket.*main_bucket"; then
-            echo "   🗄️ → Destruindo bucket principal..."
-          elif echo "$line" | grep -q "aws_s3_bucket.*logs_bucket"; then
-            echo "   📋 → Destruindo bucket de logs..."
+            echo "   🗄️ → Destruindo bucket S3..."
           elif echo "$line" | grep -q "aws_s3_bucket_encryption"; then
             echo "   🔒 → Removendo configurações de criptografia..."
           elif echo "$line" | grep -q "aws_s3_bucket_versioning"; then
@@ -137,7 +134,7 @@ jobs:
 
     - name: 🔍 Verify Destruction
       run: |
-        echo "🔍 VERIFICANDO REMOÇÃO DOS BUCKETS:"
+        echo "🔍 VERIFICANDO REMOÇÃO DO BUCKET:"
         echo "=================================="
 
         echo "📋 Buckets S3 restantes:"
@@ -146,7 +143,7 @@ jobs:
         if [ "$BUCKET_COUNT" -eq "0" ]; then
           echo "✅ Nenhum bucket encontrado - destruição bem-sucedida!"
         else
-          echo "⚠️ Ainda existem $BUCKET_COUNT buckets relacionados"
+          echo "⚠️ Ainda existem $BUCKET_COUNT bucket(s) relacionado(s)"
           aws s3 ls | grep storage-marcelo || true
         fi
 
@@ -155,7 +152,7 @@ jobs:
         echo "📊 RELATÓRIO FINAL"
         echo "=================="
         echo "✅ Infraestrutura S3 destruída com sucesso"
-        echo "🗑️ Buckets esvaziados e removidos"
+        echo "🗑️ Bucket esvaziado e removido"
         echo "⏰ Executado em: $(date)"
         echo "👤 Por: ${{ github.actor }}"
         echo "🎉 Processo concluído!"
