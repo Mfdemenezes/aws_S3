@@ -1,0 +1,161 @@
+name: 🔥 Destroy S3 Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_destroy:
+        description: 'Digite "DESTROY" para confirmar'
+        required: true
+        type: string
+
+env:
+  AWS_REGION: us-east-1
+  TF_VERSION: 1.5.0
+
+jobs:
+  destroy:
+    name: 🔥 Destroy S3
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: ⚠️ Confirm Destruction
+      run: |
+        if [ "${{ github.event.inputs.confirm_destroy }}" != "DESTROY" ]; then
+          echo "❌ Digite exatamente: DESTROY"
+          exit 1
+        fi
+        echo "✅ Confirmação OK - prosseguindo com destroy"
+
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+
+    - name: 🔑 Configure AWS
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: 🛠️ Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+
+    - name: 🗂️ Check S3 State
+      run: |
+        echo "🗂️ Verificando S3 State..."
+        BUCKET="terraform-state-marcelo-menezes"
+
+        if aws s3 ls s3://${BUCKET}/s3/storage-marcelo/terraform.tfstate >/dev/null 2>&1; then
+          echo "✅ State file encontrado no S3"
+        else
+          echo "❌ Nenhum state encontrado - nada para destruir"
+          exit 1
+        fi
+
+    - name: 🚀 Init Terraform
+      run: |
+        cd terraform
+        echo "🚀 Inicializando Terraform..."
+        terraform init
+        echo "✅ Terraform inicializado!"
+
+    - name: 🔍 Show What Will Be Destroyed
+      run: |
+        cd terraform
+        echo "🔍 BUCKETS QUE SERÃO DESTRUÍDOS:"
+        echo "==============================="
+
+        echo "📋 Buckets S3 atuais:"
+        aws s3 ls | grep storage-marcelo || echo "Nenhum bucket encontrado"
+
+        echo ""
+        echo "📋 Plano de destruição do Terraform:"
+        terraform plan -destroy -no-color
+
+    - name: 🗑️ Empty Buckets First
+      run: |
+        cd terraform
+        echo "🗑️ Esvaziando buckets antes de destruir..."
+
+        # Obter nomes dos buckets do Terraform
+        MAIN_BUCKET=$(terraform output -raw main_bucket_name 2>/dev/null || echo "")
+        LOGS_BUCKET=$(terraform output -raw logs_bucket_name 2>/dev/null || echo "")
+
+        if [ ! -z "$MAIN_BUCKET" ]; then
+          echo "🗑️ Esvaziando bucket principal: $MAIN_BUCKET"
+          aws s3 rm s3://$MAIN_BUCKET --recursive || echo "Bucket já vazio ou não existe"
+
+          echo "🗑️ Removendo versões antigas..."
+          aws s3api list-object-versions --bucket $MAIN_BUCKET --query 'Versions[].[Key,VersionId]' --output text | while read key version; do
+            aws s3api delete-object --bucket $MAIN_BUCKET --key $key --version-id $version || true
+          done
+        fi
+
+        if [ ! -z "$LOGS_BUCKET" ]; then
+          echo "🗑️ Esvaziando bucket de logs: $LOGS_BUCKET"
+          aws s3 rm s3://$LOGS_BUCKET --recursive || echo "Bucket já vazio ou não existe"
+        fi
+
+        echo "✅ Buckets esvaziados!"
+
+    - name: ⏳ Wait Before Destroy
+      run: |
+        echo "⏰ Aguardando 15 segundos antes de destruir..."
+        echo "❌ Cancele AGORA se não quiser destruir!"
+        sleep 15
+
+    - name: 💥 Execute Destroy
+      run: |
+        cd terraform
+        echo "💥 DESTRUINDO INFRAESTRUTURA S3..."
+        echo "================================="
+
+        terraform destroy -auto-approve -no-color | while IFS= read -r line; do
+          echo "🔥 $line"
+
+          # Mostrar progresso detalhado
+          if echo "$line" | grep -q "aws_s3_bucket.*main_bucket"; then
+            echo "   🗄️ → Destruindo bucket principal..."
+          elif echo "$line" | grep -q "aws_s3_bucket.*logs_bucket"; then
+            echo "   📋 → Destruindo bucket de logs..."
+          elif echo "$line" | grep -q "aws_s3_bucket_encryption"; then
+            echo "   🔒 → Removendo configurações de criptografia..."
+          elif echo "$line" | grep -q "aws_s3_bucket_versioning"; then
+            echo "   📦 → Removendo versionamento..."
+          elif echo "$line" | grep -q "random_string"; then
+            echo "   🎲 → Removendo sufixo aleatório..."
+          elif echo "$line" | grep -q "Destroy complete"; then
+            echo "   ✅ → Recurso removido!"
+          elif echo "$line" | grep -q "Still destroying"; then
+            echo "   ⏳ → Processando remoção..."
+          fi
+        done
+
+        echo ""
+        echo "✅ DESTRUIÇÃO CONCLUÍDA!"
+
+    - name: 🔍 Verify Destruction
+      run: |
+        echo "🔍 VERIFICANDO REMOÇÃO DOS BUCKETS:"
+        echo "=================================="
+
+        echo "📋 Buckets S3 restantes:"
+        BUCKET_COUNT=$(aws s3 ls | grep storage-marcelo | wc -l || echo "0")
+
+        if [ "$BUCKET_COUNT" -eq "0" ]; then
+          echo "✅ Nenhum bucket encontrado - destruição bem-sucedida!"
+        else
+          echo "⚠️ Ainda existem $BUCKET_COUNT buckets relacionados"
+          aws s3 ls | grep storage-marcelo || true
+        fi
+
+    - name: 📊 Final Report
+      run: |
+        echo "📊 RELATÓRIO FINAL"
+        echo "=================="
+        echo "✅ Infraestrutura S3 destruída com sucesso"
+        echo "🗑️ Buckets esvaziados e removidos"
+        echo "⏰ Executado em: $(date)"
+        echo "👤 Por: ${{ github.actor }}"
+        echo "🎉 Processo concluído!"

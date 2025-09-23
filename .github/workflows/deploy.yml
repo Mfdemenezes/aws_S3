@@ -1,0 +1,108 @@
+name: 🚀 Deploy S3 Infrastructure
+
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'terraform/**' ]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Escolha a ação'
+        required: true
+        default: 'plan'
+        type: choice
+        options:
+        - plan
+        - apply
+
+env:
+  AWS_REGION: us-east-1
+  TF_VERSION: 1.5.0
+
+jobs:
+  deploy:
+    name: 🚀 Deploy S3
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+
+    - name: 🔑 Configure AWS
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: 🛠️ Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+
+    - name: 🗂️ Check S3 State Backend
+      run: |
+        echo "🗂️ Verificando backend S3..."
+        BUCKET="terraform-state-marcelo-menezes"
+
+        if aws s3 ls s3://${BUCKET} >/dev/null 2>&1; then
+          echo "✅ Bucket backend encontrado: ${BUCKET}"
+        else
+          echo "⚠️ Criando bucket backend..."
+          aws s3 mb s3://${BUCKET} --region ${{ env.AWS_REGION }}
+          echo "✅ Bucket backend criado!"
+        fi
+
+    - name: 🚀 Init Terraform
+      run: |
+        cd terraform
+        echo "🚀 Inicializando Terraform com S3 backend..."
+        terraform init
+        echo "✅ Terraform inicializado!"
+
+    - name: ✅ Validate
+      run: |
+        cd terraform
+        echo "✅ Validando configuração..."
+        terraform validate
+        echo "✅ Configuração válida!"
+
+    - name: 📋 Plan
+      run: |
+        cd terraform
+        echo "📋 Criando plano de execução..."
+        terraform plan -no-color
+
+    - name: 🚀 Apply (Automatic on Push)
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: |
+        cd terraform
+        echo "🚀 Aplicando infraestrutura automaticamente..."
+        terraform apply -auto-approve -no-color
+        echo "✅ Buckets S3 criados com sucesso!"
+
+    - name: 🚀 Apply (Manual)
+      if: github.event.inputs.action == 'apply'
+      run: |
+        cd terraform
+        echo "🚀 Aplicando infraestrutura manualmente..."
+        terraform apply -auto-approve -no-color
+        echo "✅ Buckets S3 criados com sucesso!"
+
+    - name: 📊 Show Results
+      if: github.event.inputs.action == 'apply' || (github.ref == 'refs/heads/main' && github.event_name == 'push')
+      run: |
+        cd terraform
+        echo "📊 Informações dos buckets criados:"
+        terraform output -no-color
+
+        echo ""
+        echo "🔍 Buckets S3 na AWS:"
+        aws s3 ls | grep storage-marcelo || echo "Verificando..."
+
+        echo ""
+        echo "🔒 Verificando criptografia:"
+        MAIN_BUCKET=$(terraform output -raw main_bucket_name)
+        if [ ! -z "$MAIN_BUCKET" ]; then
+          aws s3api get-bucket-encryption --bucket $MAIN_BUCKET --region ${{ env.AWS_REGION }} | grep AES256 && echo "✅ Bucket principal criptografado" || echo "⚠️ Verificação de criptografia"
+        fi
